@@ -1,3 +1,8 @@
+// GitHub Secrets resolve to empty strings when unset. electron-builder treats
+// an empty certificate link as the working directory instead of no certificate.
+for (const name of ['CSC_LINK', 'CSC_KEY_PASSWORD', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD']) {
+  if (!process.env[name]?.trim()) delete process.env[name];
+}
 const release = process.env.NOTES_RELEASE_SIGNING === '1';
 module.exports = {
   appId: 'io.github.sleepingoff.notes', productName: 'Notes',
