@@ -1,0 +1,31 @@
+# Python environments and generated caches
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
+
+# Local documents, extraction results, and database
+workspace/
+output/
+input.pdf
+
+# macOS metadata
+.DS_Store
+
+# Desktop builds and local credentials
+node_modules/
+build/
+desktop-resources/
+release/
+*.spec
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.pem
+*.key
+*.cer
+*.mobileprovision
+*.log
+coverage/

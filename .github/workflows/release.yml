@@ -1,0 +1,121 @@
+name: 릴리즈
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+          - os: windows-latest
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.arch }}
+          cache: pip
+          cache-dependency-path: 'requirements-*.txt'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: 버전 확인 및 인증서 유무에 따른 서명 모드 선택
+        run: node tools/check_release.cjs
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      - name: Apple 공증 키 준비
+        if: runner.os == 'macOS' && env.NOTES_RELEASE_SIGNING == '1'
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY }}
+        run: python tools/prepare_apple_key.py
+      - run: python -m pip install -r requirements-build.txt
+      - run: npm ci --no-audit --no-fund
+      - run: python -B -m unittest discover -s tests -q
+      - run: npm test
+      - run: python tools/build_backend.py
+      - name: 앱 빌드, macOS 서명 및 공증
+        run: npm run dist -- --${{ matrix.arch }}
+        env:
+          CSC_LINK: ${{ runner.os == 'macOS' && env.NOTES_RELEASE_SIGNING == '1' && secrets.MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && env.NOTES_RELEASE_SIGNING == '1' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      - name: macOS 서명·공증 검증
+        if: runner.os == 'macOS' && env.NOTES_RELEASE_SIGNING == '1'
+        shell: bash
+        run: |
+          APP=$(find release -maxdepth 2 -name Notes.app -print -quit)
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          xcrun stapler validate "$APP"
+          spctl --assess --type execute --verbose=2 "$APP"
+      - name: 임시 서명 무결성 검증
+        if: runner.os == 'macOS' && env.NOTES_RELEASE_SIGNING != '1'
+        shell: bash
+        run: |
+          APP=$(find release -maxdepth 2 -name Notes.app -print -quit)
+          codesign --verify --deep --strict --verbose=2 "$APP"
+      - name: 실제 앱 시작 검사
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            python tools/smoke_desktop.py release/win-unpacked/Notes.exe
+          elif [[ '${{ matrix.arch }}' == 'arm64' ]]; then
+            python tools/smoke_desktop.py release/mac-arm64/Notes.app/Contents/MacOS/Notes
+          else
+            python tools/smoke_desktop.py release/mac/Notes.app/Contents/MacOS/Notes
+          fi
+      - name: 산출물 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: Notes-${{ runner.os }}-${{ matrix.arch }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: 체크섬과 GitHub Release 게시
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          cd artifacts
+          sha256sum ./* > SHA256SUMS.txt
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" ./* --clobber
+          else
+            gh release create "$TAG" ./* --verify-tag --title "Notes $TAG" --generate-notes
+          fi

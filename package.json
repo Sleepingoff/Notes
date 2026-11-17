@@ -1,0 +1,26 @@
+{
+  "name": "sleepingoff-notes",
+  "productName": "Notes",
+  "version": "0.1.0",
+  "description": "로컬 AI로 시험지를 정리하고 강의 자료와 함께 공부하는 데스크톱 앱",
+  "main": "desktop/main.cjs",
+  "author": "Sleepingoff",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sleepingoff/Notes.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "build:backend": "python tools/build_backend.py",
+    "build:dir": "electron-builder --config desktop/builder.cjs --dir --publish never",
+    "dist": "electron-builder --config desktop/builder.cjs --publish never",
+    "check:release": "node tools/check_release.cjs",
+    "postinstall": "install-electron"
+  },
+  "devDependencies": {
+    "electron": "45.3.3",
+    "electron-builder": "26.18.1"
+  }
+}

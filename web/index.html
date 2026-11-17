@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Notes</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/annotation_component/editor.css" />
+  </head>
+  <body>
+    <aside id="sidebar"></aside>
+    <main>
+      <header id="page-header"></header>
+      <div id="notice" role="status"></div>
+      <section id="content"></section>
+    </main>
+    <dialog id="edit-dialog">
+      <header>
+        <h2 id="edit-title">문제 수정</h2>
+        <button id="close-edit">닫기</button>
+      </header>
+      <div class="edit-grid">
+        <div class="edit-source-panel">
+          <div class="row region-tools"><button type="button" id="region-problem" class="active">문제 영역</button><button type="button" id="region-image">이미지 영역</button><button type="button" id="region-undo-image">마지막 이미지 취소</button><button type="button" id="region-clear">영역 초기화</button></div>
+          <p class="hint">문제 영역은 지문과 보기를 포함해 한 개 지정하세요. 이미지 영역은 여러 개 지정할 수 있습니다.</p>
+          <div class="edit-source"><img id="edit-original" alt="원본 PDF 페이지" draggable="false"/><svg id="edit-regions" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-label="원본에서 문제와 이미지 영역 지정"></svg></div>
+        </div>
+        <div>
+          <details>
+            <summary>원본에서 참고 이미지 추가</summary>
+            <p class="hint">원본 페이지 전체 기준 0~1000 좌표입니다.</p>
+            <div class="row">
+              <input
+                id="crop-left"
+                type="number"
+                value="100"
+                class="small-input"
+                aria-label="왼쪽"
+              /><input
+                id="crop-top"
+                type="number"
+                value="100"
+                class="small-input"
+                aria-label="위"
+              /><input
+                id="crop-right"
+                type="number"
+                value="900"
+                class="small-input"
+                aria-label="오른쪽"
+              /><input
+                id="crop-bottom"
+                type="number"
+                value="400"
+                class="small-input"
+                aria-label="아래"
+              /><button id="crop-image">이미지 추가</button>
+            </div>
+          </details>
+          <label id="edit-page-field" class="row" hidden>원본 페이지 <select id="edit-page" aria-label="직접 작성할 페이지"></select></label>
+          <div id="edit-context" class="hint"></div>
+          <div class="row"><label>추출할 문제 번호 <input id="region-number" class="small-input" type="number" min="1" max="10000"></label><button type="button" id="region-reextract">선택 영역 다시 추출</button></div>
+          <p id="region-status" class="hint" role="status"></p>
+          <textarea id="edit-text" aria-label="수정할 문제"></textarea>
+          <span id="edit-save-status" class="auto-save-status" role="status"></span>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="subject-rename-dialog" class="subject-dialog" aria-labelledby="subject-rename-title">
+      <form id="subject-rename-form">
+        <h2 id="subject-rename-title">과목 이름 수정</h2>
+        <label class="stack">과목 이름<input id="subject-name-input" autocomplete="off" required autofocus></label>
+        <p id="subject-rename-status" class="auto-save-status" role="status"></p>
+        <div class="dialog-actions"><button type="button" id="close-subject-rename">닫기</button></div>
+      </form>
+    </dialog>
+    <dialog id="subject-delete-dialog" class="subject-dialog" aria-labelledby="subject-delete-title" aria-describedby="subject-delete-description">
+      <form id="subject-delete-form">
+        <h2 id="subject-delete-title">정말 삭제하시겠습니까?</h2>
+        <p><strong id="subject-delete-name"></strong></p>
+        <p id="subject-delete-description" class="hint">이 과목의 자료, 문제, 필기와 풀이 기록이 함께 삭제됩니다.</p>
+        <p id="subject-delete-error" class="status-error" role="alert"></p>
+        <div class="dialog-actions"><button type="button" id="cancel-subject-delete" autofocus>취소</button><button type="submit" id="confirm-subject-delete" class="danger">삭제</button></div>
+      </form>
+    </dialog>
+    <dialog id="ai-settings-dialog" class="subject-dialog" aria-labelledby="ai-settings-title">
+      <h2 id="ai-settings-title">AI 설정</h2>
+      <p class="hint">Ollama에서 다운로드한 이미지 지원 모델을 사용합니다. 모델 설치 후 연결을 확인하세요.</p>
+      <label class="stack">Ollama 주소<input id="ai-host" type="url" placeholder="http://127.0.0.1:11434"></label>
+      <label class="stack">모델 이름<input id="ai-model" list="ai-models" placeholder="qwen3-vl:8b-instruct"><datalist id="ai-models"></datalist></label>
+      <details><summary>고급 설정</summary><label class="stack">컨텍스트 길이<input id="ai-context" type="number" min="4096" max="131072"></label><label class="stack">최대 출력 길이<input id="ai-predict" type="number" min="1024" max="32768"></label></details>
+      <p id="ai-save-status" class="auto-save-status" role="status"></p>
+      <p id="ai-connection-status" class="hint" role="status"></p>
+      <div class="dialog-actions"><button type="button" id="ai-check">연결 확인</button><button type="button" id="ai-close">닫기</button></div>
+    </dialog>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
