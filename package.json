@@ -1,7 +1,7 @@
 {
   "name": "sleepingoff-notes",
   "productName": "Notes",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "로컬 AI로 시험지를 정리하고 강의 자료와 함께 공부하는 데스크톱 앱",
   "main": "desktop/main.cjs",
   "author": "Sleepingoff",

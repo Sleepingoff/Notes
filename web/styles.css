@@ -103,6 +103,40 @@ label.stack {
   font-size: 12px;
   color: var(--muted);
 }
+#sidebar-toggle {
+  position: fixed;
+  z-index: 10;
+  top: 20px;
+  left: calc(var(--sidebar) - 54px);
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+}
+.sidebar-collapsed #sidebar-toggle {
+  left: 18px;
+}
+aside[hidden] {
+  display: none;
+}
+#lecture-focus-controls[hidden] {
+  display: none;
+}
+.sidebar-collapsed main {
+  margin-left: 0;
+  padding-left: 68px;
+  max-width: var(--max);
+}
+.lecture-focus #sidebar, .lecture-focus #sidebar-toggle,
+.lecture-focus #page-header, .lecture-focus #lecture-toc {
+  display: none;
+}
+.lecture-focus main {
+  margin-left: 0;
+  max-width: var(--max);
+}
+.lecture-focus .viewer-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
 aside {
   position: fixed;
   inset: 0 auto 0 0;
@@ -504,6 +538,15 @@ a {
   }
 }
 @media (max-width: 620px) {
+  #sidebar-toggle, .sidebar-collapsed #sidebar-toggle {
+    position: absolute;
+    top: 12px;
+    left: auto;
+    right: 15px;
+  }
+  .sidebar-collapsed main {
+    padding: 60px 14px 20px;
+  }
   aside {
     position: relative;
     width: 100%;

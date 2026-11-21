@@ -4,6 +4,15 @@ import { AutoSave } from "/autosave.js";
 import { RegionSelector } from "/region_selector.js";
 const $ = (s) => document.querySelector(s),
   content = $("#content");
+const sidebarToggle = $("#sidebar-toggle");
+sidebarToggle.onclick = () => {
+  const collapsed = sidebarToggle.getAttribute("aria-expanded") === "true";
+  $("#sidebar").hidden = collapsed;
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+  sidebarToggle.setAttribute("aria-label", collapsed ? "사이드 메뉴 열기" : "사이드 메뉴 접기");
+  sidebarToggle.title = collapsed ? "사이드 메뉴 열기" : "사이드 메뉴 접기";
+};
 const S = {
   subjects: [],
   subject: null,
@@ -19,6 +28,27 @@ const S = {
   drafts: {},
   explanationDrafts: {},
 };
+document.addEventListener("keydown", (event) => {
+  if (!document.body.classList.contains("lecture-focus") || S.route !== "lecture" ||
+      event.defaultPrevented || event.isComposing || event.keyCode === 229 ||
+      document.querySelector("dialog[open]") ||
+      event.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+  const key = event.key.toLowerCase();
+  const modifier = event.metaKey || event.ctrlKey;
+  let button;
+  if (modifier && !event.altKey && key === "z")
+    button = $(event.shiftKey ? '#lecture-editor [data-id="redo"]' : '#lecture-editor [data-id="undo"]');
+  else if (!modifier && !event.altKey && !event.shiftKey) {
+    const tool = {b: "pen", t: "text", e: "erase", h: "highlight"}[key];
+    if (tool) button = $(`#lecture-editor [data-tool="${tool}"]`);
+    else if (key === "arrowleft") button = $("#lecture-prev");
+    else if (key === "arrowright") button = $("#lecture-next");
+  }
+  if (button) {
+    event.preventDefault();
+    if (!button.disabled && !(event.repeat && (key === "arrowleft" || key === "arrowright"))) button.click();
+  }
+});
 const questionListObserver = new ResizeObserver(() => {
   const list = $("#question-list");
   if (list && Number(list.dataset.layoutWidth) !== list.clientWidth) summary();
@@ -345,6 +375,7 @@ async function go(route) {
   }
 }
 async function render() {
+  document.body.classList.remove("lecture-focus");
   await flushAutosaves();
   questionListObserver.disconnect();
   if (!S.subject) {
@@ -405,15 +436,26 @@ function anchoredLecturePage(bundle, anchor) {
   return chapter ? Math.min(chapter.end, chapter.start + anchor.offset) : clampPage(anchor.page, bundle.pages);
 }
 async function lecture() {
-  content.innerHTML = `<div id="lecture-tools" class="row between"></div><div class="viewer-grid section"><nav id="lecture-toc" class="toc toc-manager" aria-label="강의 목차 및 자료 관리"></nav><div id="lecture-document" class="document"></div></div>`;
+  content.innerHTML = `<div id="lecture-tools" class="row between"></div><div id="lecture-focus-controls" class="row"></div><div class="viewer-grid section"><nav id="lecture-toc" class="toc toc-manager" aria-label="강의 목차 및 자료 관리"></nav><div id="lecture-document" class="document"></div></div>`;
   lectureManage($("#lecture-toc"));
   await paintLectureDocument();
+  if ($("#lecture-focus-controls")) {
+    $("#lecture-focus-controls").innerHTML = '<button type="button" id="lecture-focus-toggle" aria-pressed="false">강의 집중 모드</button><span id="lecture-shortcuts" class="hint" hidden>단축키: B 펜 · T 텍스트 · E 지우개 · H 형광펜 · ←/→ 페이지 · ⌘/Ctrl+Z 되돌리기 · ⌘/Ctrl+Shift+Z 다시 실행</span>';
+    $("#lecture-focus-toggle").onclick = (event) => {
+      const enabled = document.body.classList.toggle("lecture-focus");
+      event.currentTarget.setAttribute("aria-pressed", String(enabled));
+      event.currentTarget.textContent = enabled ? "집중 모드 종료" : "강의 집중 모드";
+      $("#lecture-shortcuts").hidden = !enabled;
+    };
+  }
 }
+
 let lectureViewVersion = 0;
 async function paintLectureDocument() {
   const version = ++lectureViewVersion;
   const subject = S.subject, root = $("#lecture-document"), b = S.data.bundle;
   if (!root || S.route !== "lecture") return;
+  $("#lecture-focus-controls").hidden = !b;
   if (root.bundle !== b) {
     $("#lecture-tools").innerHTML = b
       ? `<span class="muted">${b.chapters.length}개 회차 · ${b.pages}페이지</span><div class="row"><a class="button" href="${url("/api/lecture/pdf", {subject})}">원본 PDF</a><button id="export-ink">필기 포함 PDF 다운로드</button></div>`
